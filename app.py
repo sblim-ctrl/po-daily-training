@@ -27,6 +27,8 @@ with st.sidebar:
                     st.rerun()
         st.caption("처음 쓰는 닉네임이면 바로 가입돼요. PIN을 잊으면 기록을 불러올 수 없어요.")
 
+st.markdown("**PO-Daily-Training**")
+
 st.navigation([
     st.Page("views/home.py", title="오늘의 브리핑", icon=":material/newspaper:", default=True),
     st.Page("views/case.py", title="케이스 답변", icon=":material/edit_note:"),
