@@ -17,7 +17,6 @@ if not hmac.compare_digest(pw, st.secrets["ADMIN_PASSWORD"]):
 
 today = db.today_kst()
 st.caption(str(today))
-st.badge(llm.case_type_for(today), color="blue")
 
 if st.button("오늘 케이스 만들기", type="primary", help="오늘 초안을 새로 만들어요. 이미 발행한 케이스는 그대로 남아요."):
     with st.spinner("뉴스를 모으고 케이스를 만들고 있어요. 1~2분 걸려요."):
@@ -38,6 +37,7 @@ for c in cases:
     is_published = c["status"] == "published"
     with st.form(f"case_{c['id']}"):
         st.caption(f"슬롯 {c['slot']}")
+        st.badge(c["case_type"], color="blue")
         if is_published:
             st.badge("발행됨", color="green")
         else:

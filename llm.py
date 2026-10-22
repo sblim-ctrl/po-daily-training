@@ -32,7 +32,7 @@ CASE_PROMPT = """[슬롯] {label}
 1. 기능 출시, 정책 변경, 실험, 지표 변화처럼 '프로덕트 의사결정'이 담긴 뉴스 1개를 고른다. 순수 광고, 브랜드 캠페인, 방법론 아티클, 주가 기사는 제외한다. '오늘 이미 다룬 주제'와 같은 회사·서비스·소식을 다룬 기사는 언론사가 달라도 고르지 않는다.
 2. headline: 한국어 40자 이내. 명사형으로 끝내고 '~다'로 끝내지 않는다.
 3. summary: 후보에 적힌 사실만으로 해요체 2~3문장 (예: "~를 출시했어요."). 원문 문장을 그대로 옮기지 않고, 추측을 넣지 않는다.
-4. question: '{case_type}' 유형의 케이스 질문 1개. 해요체로, 5분 안에 답할 수 있는 범위로 (예: "이 기능의 성공 지표를 무엇으로 잡겠어요?").
+4. question: '{case_type}' 유형의 케이스 질문 1개. 위 예시 질문의 의도를 따르되 해요체 의문문(~하겠어요?, ~일까요?)으로, 5분 안에 답할 수 있는 범위로 쓴다. 다른 유형의 질문(예: 개선안인데 성공 지표를 묻는 질문)을 내지 않는다.
 5. rubric: 좋은 답이 갖춰야 할 평가 기준 3~4개 (문자열 배열, 명사형).
 6. 이모지, 느낌표, 과장 표현(혁신적, 최고의)을 쓰지 않는다.
 출력 JSON 키: pick(고른 후보 번호, 정수), headline, summary, question, rubric"""
@@ -80,8 +80,9 @@ def _chat(system, user, json_mode=False):
     return r.choices[0].message.content
 
 
-def case_type_for(d):
-    return CASE_TYPES[d.weekday() % 5]
+def case_type_for(d, slot=1):
+    # 슬롯 1은 요일 유형, 슬롯 2·3은 다음 유형을 이어 써서 하루에 3가지 유형을 다룬다
+    return CASE_TYPES[(d.weekday() + slot - 1) % 5]
 
 
 def parse_case(text, n):
@@ -119,7 +120,6 @@ def generate_case(label, case_type, candidates, avoid=()):
 
 
 def generate_daily(d):
-    case_type = case_type_for(d)
     # 같은 날 후보는 거의 그대로라 LLM이 매번 같은 기사를 고른다. 오늘 이미 쓴 기사는 빼서 다시 만들 때마다 바뀌게 한다
     # 같은 소식을 다른 언론사가 쓴 기사는 URL이 달라서, 헤드라인도 넘겨 LLM이 주제를 피하게 한다
     today_cases = db.cases_by_date(d)
@@ -127,6 +127,7 @@ def generate_daily(d):
     avoid = [c["headline"] for c in today_cases if c["headline"]]
     drafts, errors = [], []
     for slot, label, fetch in SLOTS:
+        case_type = case_type_for(d, slot)
         try:
             candidates = [c for c in fetch() if c["url"] not in used]
             drafts.append({"slot": slot, "case_type": case_type, **generate_case(label, case_type, candidates, avoid)})

@@ -15,6 +15,13 @@ def test_case_type_follows_weekday_rotation():
     assert llm.case_type_for(date(2026, 10, 25)) == "지표 설계"  # 일
 
 
+def test_case_type_differs_per_slot():
+    thu = date(2026, 10, 22)
+    assert [llm.case_type_for(thu, s) for s in (1, 2, 3)] == ["개선안", "역기획", "문제 정의"]
+    fri = date(2026, 10, 23)
+    assert [llm.case_type_for(fri, s) for s in (1, 2, 3)] == ["역기획", "문제 정의", "지표 설계"]
+
+
 def test_clean_strips_tags_and_entities():
     assert sources.clean("<b>카카오</b> &quot;신기능&quot; 출시") == '카카오 "신기능" 출시'
 
