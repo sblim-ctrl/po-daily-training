@@ -1,0 +1,22 @@
+# toss.md(TDS) 토큰을 Streamlit 테마로 옮긴 값. 다크 모드는 범위 밖이라 light로 고정한다.
+[theme]
+base = "light"
+primaryColor = "#3182F6"             # blue-500: 화면당 primary 버튼 1개에만 쓴다
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F2F4F6" # grey-100: 입력창, 보조 표면
+textColor = "#191F28"                # grey-900: 순수 검정 대신
+linkColor = "#3182F6"
+linkUnderline = false
+borderColor = "#E5E8EB"              # grey-200: 1px 헤어라인
+showWidgetBorder = true
+baseRadius = "12px"                  # radius-m: 입력창, 카드, 배지
+buttonRadius = "14px"                # radius-l: L 버튼
+font = "Pretendard Variable:https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css, sans-serif"
+baseFontSize = 15                    # body-2 (15px, 한글 본문 기본)
+headingFontSizes = ["28px", "24px", "22px", "20px", "18px", "17px"]  # h1, h2, h3, h4, title-1, title-2
+headingFontWeights = [700, 700, 700, 700, 600, 600]
+blueColor = "#3182F6"
+redColor = "#F04452"                 # red-500
+greenColor = "#007738"               # green-500 (oklch 0.493 0.143 154를 hex로 바꾼 값)
+orangeColor = "#FF8800"              # orange-500, 경고
+grayColor = "#8B95A1"                # grey-500
