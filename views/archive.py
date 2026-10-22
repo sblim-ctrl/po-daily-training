@@ -3,6 +3,8 @@ import streamlit as st
 import db
 import llm
 
+RATING_LABELS = {"helpful": "도움됐어요", "meh": "아쉬워요"}  # views/case.py와 같은 문구
+
 user = st.session_state.get("user")
 if not user:
     st.info("사이드바에 닉네임과 PIN을 입력하면 바로 시작할 수 있어요.")
@@ -16,8 +18,15 @@ if not rows:
     st.stop()
 
 t = st.segmented_control("유형", ["전체", *llm.CASE_TYPES], default="전체") or "전체"  # 선택 해제하면 None
-filtered = [r for r in rows if t == "전체" or r["cases"]["case_type"] == t]
+only_helpful = st.toggle("도움된 피드백만 보기")
+filtered = [
+    r for r in rows
+    if (t == "전체" or r["cases"]["case_type"] == t)
+    and (not only_helpful or r["rating"] == "helpful")
+]
 st.caption(f"{len(filtered)}개")
+if only_helpful and not filtered:
+    st.info("아직 도움됐어요로 평가한 피드백이 없어요. 케이스 화면에서 피드백을 평가하면 여기서 모아 볼 수 있어요.")
 
 for r in filtered:
     c = r["cases"]
@@ -28,6 +37,8 @@ for r in filtered:
         st.markdown("#### AI 피드백")
         if r["feedback"]:
             st.markdown(r["feedback"])
+            if r["rating"]:
+                st.caption(f"내 평가: {RATING_LABELS[r['rating']]}")
         else:
             st.caption("아직 피드백이 없어요. [이 케이스 열기]에서 다시 받을 수 있어요.")
         if st.button("이 케이스 열기", key=f"open_{r['id']}"):
