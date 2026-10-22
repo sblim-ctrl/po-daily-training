@@ -5,6 +5,7 @@ import logging
 import streamlit as st
 from openai import OpenAI
 
+import db
 from sources import SLOTS
 
 MODEL = "gpt-5-mini"  # gpt-5 계열은 temperature를 지원하지 않아 넘기지 않는다
@@ -24,9 +25,11 @@ CASE_PROMPT = """[슬롯] {label}
 [오늘의 케이스 유형] {case_type} (예시 질문: {hint})
 [후보 뉴스]
 {candidates}
+[오늘 이미 다룬 주제]
+{avoid}
 
 지시:
-1. 기능 출시, 정책 변경, 실험, 지표 변화처럼 '프로덕트 의사결정'이 담긴 뉴스 1개를 고른다. 순수 광고, 브랜드 캠페인, 방법론 아티클, 주가 기사는 제외한다.
+1. 기능 출시, 정책 변경, 실험, 지표 변화처럼 '프로덕트 의사결정'이 담긴 뉴스 1개를 고른다. 순수 광고, 브랜드 캠페인, 방법론 아티클, 주가 기사는 제외한다. '오늘 이미 다룬 주제'와 같은 회사·서비스·소식을 다룬 기사는 언론사가 달라도 고르지 않는다.
 2. headline: 한국어 40자 이내. 명사형으로 끝내고 '~다'로 끝내지 않는다.
 3. summary: 후보에 적힌 사실만으로 해요체 2~3문장 (예: "~를 출시했어요."). 원문 문장을 그대로 옮기지 않고, 추측을 넣지 않는다.
 4. question: '{case_type}' 유형의 케이스 질문 1개. 해요체로, 5분 안에 답할 수 있는 범위로 (예: "이 기능의 성공 지표를 무엇으로 잡겠어요?").
@@ -94,14 +97,17 @@ def parse_case(text, n):
     return {**{k: data[k] for k in CASE_KEYS}, "rubric": rubric}
 
 
-def generate_case(label, case_type, candidates):
+def generate_case(label, case_type, candidates, avoid=()):
     if not candidates:
         raise ValueError("후보 뉴스 없음")
     candidates = candidates[:20]
     numbered = "\n".join(f"{i}. {c['title']} | {c['desc']}" for i, c in enumerate(candidates))
+    avoid_text = "\n".join(f"- {h}" for h in avoid) or "(없음)"
     text = _chat(
         CASE_SYSTEM,
-        CASE_PROMPT.format(label=label, case_type=case_type, hint=TYPE_HINTS[case_type], candidates=numbered),
+        CASE_PROMPT.format(
+            label=label, case_type=case_type, hint=TYPE_HINTS[case_type], candidates=numbered, avoid=avoid_text,
+        ),
         json_mode=True,
     )
     c = parse_case(text, len(candidates))
@@ -114,10 +120,16 @@ def generate_case(label, case_type, candidates):
 
 def generate_daily(d):
     case_type = case_type_for(d)
+    # 같은 날 후보는 거의 그대로라 LLM이 매번 같은 기사를 고른다. 오늘 이미 쓴 기사는 빼서 다시 만들 때마다 바뀌게 한다
+    # 같은 소식을 다른 언론사가 쓴 기사는 URL이 달라서, 헤드라인도 넘겨 LLM이 주제를 피하게 한다
+    today_cases = db.cases_by_date(d)
+    used = {c["source_url"] for c in today_cases}
+    avoid = [c["headline"] for c in today_cases if c["headline"]]
     drafts, errors = [], []
     for slot, label, fetch in SLOTS:
         try:
-            drafts.append({"slot": slot, "case_type": case_type, **generate_case(label, case_type, fetch())})
+            candidates = [c for c in fetch() if c["url"] not in used]
+            drafts.append({"slot": slot, "case_type": case_type, **generate_case(label, case_type, candidates, avoid)})
         except (ValueError, RuntimeError) as e:
             logging.warning("slot %s failed: %s", slot, e)
             errors.append((slot, str(e)))
