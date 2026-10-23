@@ -1,6 +1,7 @@
 """OpenAI로 케이스를 만들고 답변에 피드백한다. DB에는 쓰지 않는다."""
 import json
 import logging
+import re
 
 import streamlit as st
 from openai import OpenAI
@@ -143,3 +144,15 @@ def generate_daily(d):
 
 def feedback(question, rubric, answer):
     return _chat(FEEDBACK_SYSTEM, FEEDBACK_PROMPT.format(question=question, rubric=rubric, answer=answer))
+
+
+FEEDBACK_SECTIONS = ("강점", "빈틈", "개선 제안")
+_SECTION_HEADING = re.compile(r"^\s*\*\*(강점|빈틈|개선 제안)\*\*\s*:?\s*$", re.M)
+
+
+def split_feedback(text):
+    """피드백을 [(소제목, 본문)] 3개로 나눈다. 형식이 다르면 내용을 잃지 않게 [(None, text)]."""
+    parts = _SECTION_HEADING.split(text)  # [앞부분, 제목1, 본문1, 제목2, 본문2, ...]
+    if parts[0].strip() or tuple(parts[1::2]) != FEEDBACK_SECTIONS:
+        return [(None, text)]
+    return [(title, body.strip()) for title, body in zip(parts[1::2], parts[2::2])]

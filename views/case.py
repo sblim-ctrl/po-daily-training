@@ -4,6 +4,7 @@ import streamlit as st
 
 import db
 import llm
+import ui
 
 MIN_LEN = 50
 RATING_LABELS = {"helpful": "도움됐어요", "meh": "아쉬워요"}
@@ -79,7 +80,7 @@ if answer:
             _generate_feedback(case, answer)
     else:
         st.markdown("#### AI 피드백")
-        st.markdown(answer["feedback"])
+        ui.feedback_cards(answer["feedback"], answer["id"])
         if answer["rating"]:
             st.caption(f"내 평가: {RATING_LABELS[answer['rating']]}")
         else:

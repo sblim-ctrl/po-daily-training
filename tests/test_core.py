@@ -26,6 +26,26 @@ def test_clean_strips_tags_and_entities():
     assert sources.clean("<b>카카오</b> &quot;신기능&quot; 출시") == '카카오 "신기능" 출시'
 
 
+FEEDBACK = "**강점**\n- a\n\n**빈틈**\n- b\n\n**개선 제안**\n- c\n덧붙임"
+
+
+def test_split_feedback_returns_three_sections():
+    assert llm.split_feedback(FEEDBACK) == [("강점", "- a"), ("빈틈", "- b"), ("개선 제안", "- c\n덧붙임")]
+
+
+def test_split_feedback_allows_colon_after_heading():
+    assert [t for t, _ in llm.split_feedback(FEEDBACK.replace("**빈틈**", "**빈틈**:"))] == ["강점", "빈틈", "개선 제안"]
+
+
+@pytest.mark.parametrize("text", [
+    "**강점**\n- a\n\n**개선 제안**\n- c",   # 소제목 누락
+    "총평이에요.\n" + FEEDBACK,               # 첫 소제목 앞에 본문
+    "그냥 문단이에요.",
+])
+def test_split_feedback_falls_back_to_one_block(text):
+    assert llm.split_feedback(text) == [(None, text)]
+
+
 def _case(**over):
     base = {"pick": 1, "headline": "h", "summary": "s", "question": "q", "rubric": ["a", "b"]}
     return json.dumps({**base, **over})

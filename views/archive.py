@@ -2,6 +2,7 @@ import streamlit as st
 
 import db
 import llm
+import ui
 
 RATING_LABELS = {"helpful": "도움됐어요", "meh": "아쉬워요"}  # views/case.py와 같은 문구
 
@@ -36,7 +37,7 @@ for r in filtered:
         st.write(r["body"])
         st.markdown("#### AI 피드백")
         if r["feedback"]:
-            st.markdown(r["feedback"])
+            ui.feedback_cards(r["feedback"], r["id"])
             if r["rating"]:
                 st.caption(f"내 평가: {RATING_LABELS[r['rating']]}")
         else:
